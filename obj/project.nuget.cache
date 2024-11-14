@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "Y26/sEHNE54=",
+  "success": true,
+  "projectFilePath": "/Users/markit125/AllData/FS/FLang/flang.fsproj",
+  "expectedPackageFiles": [
+    "/Users/markit125/.nuget/packages/fsharp.core/8.0.401/fsharp.core.8.0.401.nupkg.sha512"
+  ],
+  "logs": []
+}
