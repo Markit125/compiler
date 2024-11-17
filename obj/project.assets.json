@@ -113,11 +113,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/markit125/AllData/FS/flang/flang.fsproj",
+      "projectUniqueName": "/Users/markit125/AllData/FS/compiler/flang.fsproj",
       "projectName": "flang",
-      "projectPath": "/Users/markit125/AllData/FS/flang/flang.fsproj",
+      "projectPath": "/Users/markit125/AllData/FS/compiler/flang.fsproj",
       "packagesPath": "/Users/markit125/.nuget/packages/",
-      "outputPath": "/Users/markit125/AllData/FS/flang/obj/",
+      "outputPath": "/Users/markit125/AllData/FS/compiler/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/markit125/.nuget/NuGet/NuGet.Config"
