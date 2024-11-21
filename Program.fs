@@ -15,53 +15,44 @@ let tokenize input =
 let rec parseExpr tokens =
     match tokens with   
     | "say" :: var :: "=" :: rest ->
-        // printfn "say %s = " var
         let expr1, tokens' = parseExpr rest
         let expr2, tokens'' = parseExpr tokens'
         Say(var, expr1, expr2), tokens''
     | "sum" :: rest ->
-        // printfn "sum"
         let expr1, tokens' = parseExpr rest
         let expr2, tokens'' = parseExpr tokens'
         Sum(expr1, expr2), tokens''
     | "mult" :: rest ->
-        // printfn "mult"
         let expr1, tokens' = parseExpr rest
         let expr2, tokens'' = parseExpr tokens'
         Mult(expr1, expr2), tokens''
     | "if" :: rest ->
-        // printfn "if"
         let cond, tokens' = parseExpr rest
-        let expr1, tokens'' = parseExpr tokens'
-        let expr2, tokens''' = parseExpr tokens''
-        If(cond, expr1, expr2), tokens'''
+        match tokens' with
+        | "then" :: thenTokens ->
+            let expr1, tokens'' = parseExpr thenTokens
+            match tokens'' with
+            | "else" :: elseTokens ->
+                let expr2, tokens''' = parseExpr elseTokens
+                If(cond, expr1, expr2), tokens'''
+            | _ -> failwith "Expected 'else'"
+        | _ -> failwith "Expected 'then'"
     | "print" :: rest ->
-        // printfn "print"
         let expr, tokens' = parseExpr rest
         Print(expr), tokens'
     | pattern :: rest ->
         let (success, value) = System.Int32.TryParse(pattern)
-
         if success then
-            // printfn "int %s" pattern
             Int(value), rest
         else
             let (success, value) = System.Double.TryParse(pattern)
             if success then
-                // printfn "float %s" pattern
                 Float(value), rest
             else
-                // printfn "str %s" pattern
                 Var(pattern), rest
-        
     | _ ->
         failwith "Invalid code"
-let program = """
-    say x = sum 4.5 5
-    say y = mult 2 3
-    print x
-    print y
-"""
+
 let rec eval env expr =
     match expr with
     | Print e ->
@@ -77,6 +68,11 @@ let rec eval env expr =
         let value = eval env e1
         let newEnv = Map.add name value env
         eval newEnv e2
+    | If(cond, e1, e2) ->
+        if eval env cond <> 0.0 then
+            eval env e1
+        else
+            eval env e2
 
 let rec parseManyExprs tokens =
     if List.isEmpty tokens then
@@ -90,7 +86,6 @@ let parse input =
     let tokens = tokenize input
     parseManyExprs tokens
 
-
 let rec evalSeq env exprs =  
     match exprs with
     | [] -> ()
@@ -102,8 +97,24 @@ let rec evalSeq env exprs =
         let value = eval env e1
         let newEnv = Map.add name value env
         evalSeq newEnv (e2 :: rest)
-    | _ :: rest ->
+    | expr :: rest ->
+        eval env expr
         evalSeq env rest
+
+let program = """
+    say x = sum 4.5 5
+    say y = mult 2 3
+    say z = if sum x y then 10 else 20
+    print z
+    say w = if mult 0 x then 10 else 20
+    print w
+
+    say a = 1
+    say b = 1
+    say minusB = mult b -1
+    say equals = if sum a minusB then 0 else 1
+    print equals
+"""
 
 let main =
     let exprs, _ = parse program
