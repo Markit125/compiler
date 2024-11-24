@@ -4,16 +4,37 @@
     | Float of double
     | Sum of Expr * Expr
     | Mult of Expr * Expr
+    | Equal of Expr * Expr
     | Say of string * Expr * Expr
     | If of Expr * Expr * Expr
     | Print of Expr
+    | FuncDef of string * string * Expr
+    | FuncCall of string * Expr
+
+type Value = | Num of float | Fun of string * Expr
 
 let tokenize input =
     input.ToString().Split([| '('; ')'; ' '; '\n'; '\t' |], System.StringSplitOptions.RemoveEmptyEntries)
     |> Array.toList
 
 let rec parseExpr tokens =
-    match tokens with   
+    match tokens with
+    | "Int" :: "-" :: valueStr :: rest ->
+        let (success, value) = System.Int32.TryParse(valueStr)
+        if success then
+            Int(-value), rest
+        else
+            failwith "Invalid integer"
+    | "Int" :: valueStr :: rest ->
+        let (success, value) = System.Int32.TryParse(valueStr)
+        if success then
+            Int(value), rest
+        else
+            failwith "Invalid integer"
+    | "equal" :: rest ->
+        let expr1, tokens' = parseExpr rest
+        let expr2, tokens'' = parseExpr tokens'
+        Equal(expr1, expr2), tokens''
     | "say" :: var :: "=" :: rest ->
         let expr1, tokens' = parseExpr rest
         let expr2, tokens'' = parseExpr tokens'
@@ -40,6 +61,12 @@ let rec parseExpr tokens =
     | "print" :: rest ->
         let expr, tokens' = parseExpr rest
         Print(expr), tokens'
+    | "func" :: name :: param :: "=" :: rest ->
+        let body, tokens' = parseExpr rest
+        FuncDef(name, param, body), tokens'
+    | "call" :: name :: rest ->
+        let arg, tokens' = parseExpr rest
+        FuncCall(name, arg), tokens'
     | pattern :: rest ->
         let (success, value) = System.Int32.TryParse(pattern)
         if success then
@@ -63,16 +90,36 @@ let rec eval env expr =
     | Float f -> f
     | Sum(e1, e2) -> eval env e1 + eval env e2
     | Mult(e1, e2) -> eval env e1 * eval env e2
-    | Var name -> Map.find name env
+    | Equal(e1, e2) ->
+        let val1 = eval env e1
+        let val2 = eval env e2
+        if val1 = val2 then 1.0 else 0.0
+    | Var name -> 
+        match Map.tryFind name env with
+        | Some(Num n) -> n
+        | Some(Fun(_, _)) -> failwith "Function cannot be used as a value"
+        | None -> failwithf "Variable '%s' not found in environment" name
     | Say(name, e1, e2) ->
         let value = eval env e1
-        let newEnv = Map.add name value env
+        let newEnv = Map.add name (Num value) env
         eval newEnv e2
     | If(cond, e1, e2) ->
         if eval env cond <> 0.0 then
             eval env e1
         else
             eval env e2
+    | FuncDef(name, param, body) ->
+        let funcValue = Fun(param, body)
+        let newEnv = Map.add name funcValue env
+        0.0
+    | FuncCall(name, arg) ->
+        match Map.tryFind name env with
+        | Some(Fun(param, body)) ->
+            let argValue = eval env arg
+            let newEnv = Map.add param (Num argValue) env
+            eval newEnv body
+        | Some(Num _) -> failwith "Not a function"
+        | None -> failwithf "Function '%s' not found in environment" name
 
 let rec parseManyExprs tokens =
     if List.isEmpty tokens then
@@ -95,25 +142,20 @@ let rec evalSeq env exprs =
         evalSeq env rest
     | Say(name, e1, e2) :: rest ->
         let value = eval env e1
-        let newEnv = Map.add name value env
+        let newEnv = Map.add name (Num value) env
         evalSeq newEnv (e2 :: rest)
+    | FuncDef(name, param, body) :: rest ->
+        let funcValue = Fun(param, body)
+        let newEnv = Map.add name funcValue env
+        evalSeq newEnv rest
     | expr :: rest ->
         eval env expr
         evalSeq env rest
 
 let program = """
-    say x = sum 4.5 5
-    say y = mult 2 3
-    say z = if sum x y then 10 else 20
-    print z
-    say w = if mult 0 x then 10 else 20
-    print w
-
-    say a = 1
-    say b = 1
-    say minusB = mult b -1
-    say equals = if sum a minusB then 0 else 1
-    print equals
+    func factorial x = if equal x 0 then 1 else mult x (call factorial sum x Int -1)
+    say result = call factorial 6
+    print result
 """
 
 let main =
